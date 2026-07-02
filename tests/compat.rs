@@ -17,6 +17,9 @@ const GNM_30_60: &str = include_str!("golden/gnm_30_60_s42.txt");
 const GNM_50_120: &str = include_str!("golden/gnm_50_120_s7.txt");
 const GNM_1000_4000: &str = include_str!("golden/gnm_1000_4000_s1.txt");
 
+const SELFLOOP_TRIANGLE: &str = include_str!("golden/selfloop_triangle.txt");
+const SELFLOOP_PATH: &str = include_str!("golden/selfloop_path.txt");
+
 fn gh(input: &str, it: usize, ds: usize) -> String {
     graph_hash_from_edge_list(input, it, ds)
 }
@@ -203,9 +206,86 @@ fn subgraph_karate_nodes() {
 }
 
 #[test]
-fn parse_dedups_and_drops_self_loops() {
-    // triangle with a duplicate edge, a self-loop, a comment and blank lines —
-    // must reduce to the plain triangle hash.
-    let noisy = "# header\n\na b\nb a\nb c\n\nc a\nc c\n# trailing\n";
+fn parse_dedups_parallel_edges_and_skips_comments() {
+    // triangle with a duplicate edge (in reversed order), a comment and blank
+    // lines — must reduce to the plain triangle hash.
+    let noisy = "# header\n\na b\nb a\nb c\n\nc a\n# trailing\n";
     assert_eq!(gh(noisy, 3, 16), gh(TRIANGLE, 3, 16));
+}
+
+// A self-loop on `a` raises its degree from 2 to 4 (nx counts a loop twice) and
+// puts `a` in its own neighbour multiset once, so the whole-graph hash differs
+// from the plain triangle. Oracle: networkx 3.6.1.
+#[test]
+fn graph_selfloop_triangle() {
+    assert_eq!(
+        gh(SELFLOOP_TRIANGLE, 3, 16),
+        "a287926f8587713006ac7348dc33eee8"
+    );
+    assert_eq!(
+        gh(SELFLOOP_TRIANGLE, 5, 16),
+        "be076bb87bad4eb362b8e4e1fb8ec7d1"
+    );
+    assert_eq!(gh(SELFLOOP_TRIANGLE, 5, 8), "3c1ef56915aa5ef1");
+    assert_eq!(gh(SELFLOOP_TRIANGLE, 3, 8), "8c74bf1b9df84ec8");
+    // dropping the self-loop would collapse this to the plain triangle hash
+    assert_ne!(gh(SELFLOOP_TRIANGLE, 3, 16), gh(TRIANGLE, 3, 16));
+}
+
+#[test]
+fn graph_selfloop_path() {
+    assert_eq!(gh(SELFLOOP_PATH, 3, 16), "cc3c42335c518d409f276315aea8050f");
+    assert_eq!(gh(SELFLOOP_PATH, 5, 16), "3c326e3c2a606217b1c92c26b9c78dbc");
+    assert_eq!(gh(SELFLOOP_PATH, 5, 8), "830a9b607c822f8f");
+    assert_eq!(gh(SELFLOOP_PATH, 3, 8), "74342b0c65c7451a");
+}
+
+#[test]
+fn subgraph_selfloop_triangle() {
+    let rows = subgraph_hashes_from_edge_list(SELFLOOP_TRIANGLE, 3, 16);
+    assert_eq!(
+        node_seq(&rows, "a"),
+        [
+            "c33cedce35493fc82dfad8ee5206e23e",
+            "125e463bbe967e2b4bafd1a467e30ce1",
+            "d913b03ae34c9e7014a614bb86c16f33",
+        ]
+    );
+    // b and c are symmetric (both plain degree-2 corners)
+    let bc = [
+        "4129e2a8044a57ce7635fd6023661cd6",
+        "914c3882b338d081e465704a0071e63d",
+        "0d0554aa76de209cf579c0d960d8bb22",
+    ];
+    assert_eq!(node_seq(&rows, "b"), bc);
+    assert_eq!(node_seq(&rows, "c"), bc);
+}
+
+#[test]
+fn subgraph_selfloop_path() {
+    let rows = subgraph_hashes_from_edge_list(SELFLOOP_PATH, 3, 16);
+    assert_eq!(
+        node_seq(&rows, "d"),
+        [
+            "c3585b60b755fb13e6e65a16d20f1230",
+            "19613c77d29c4f1f2c82c3385c90e7dd",
+            "66f4701fab5b1371bf7c73ac4094c485",
+        ]
+    );
+    assert_eq!(
+        node_seq(&rows, "c"),
+        [
+            "c3585b60b755fb13e6e65a16d20f1230",
+            "bc6b88dc3f535192a81e9083e46bdafc",
+            "fcc201cfbcdf99b32be7952c3be00ff6",
+        ]
+    );
+    // a and b are symmetric degree-2 ends of the a-b-c chain
+    let ab = [
+        "4129e2a8044a57ce7635fd6023661cd6",
+        "793295b409f46a69bc4968008523d606",
+        "81af7c615af30703408b494a6ac1c9fc",
+    ];
+    assert_eq!(node_seq(&rows, "a"), ab);
+    assert_eq!(node_seq(&rows, "b"), ab);
 }

@@ -26,8 +26,8 @@ pub enum Mode {
 /// (`networkx.weisfeiler_lehman_graph_hash` / `..._subgraph_hashes`).
 ///
 /// Reads an edge list (`u v` per line; `#` comments and blank lines skipped;
-/// string node names; parallel edges deduplicated and self-loops dropped as in
-/// a simple `nx.Graph`; the node set is the edge endpoints). `graph` mode prints
+/// string node names; parallel edges deduplicated, self-loops kept as in an
+/// `nx.Graph`; the node set is the edge endpoints). `graph` mode prints
 /// one hex hash; `subgraph` mode prints `node hash1 hash2 ...` per node, sorted
 /// by node name.
 #[derive(Parser, Debug)]

@@ -46,7 +46,9 @@ The graph is the simple undirected graph induced by the edge list, matching
 `nx.Graph`:
 
 - Parallel (duplicate) edges are deduplicated.
-- Self-loops (`u u`) are dropped.
+- Self-loops (`u u`) are kept, as `nx.Graph` keeps them: a self-loop appears
+  once in the node's neighbour list but adds two to its degree (the default WL
+  initial label), so it changes the hash.
 - The **node set is exactly the endpoints seen in the edge list** — there is no
   way to introduce an isolated (degree-0) node through an edge list, and none is
   added. If you need isolated nodes in the hash you must supply them via a

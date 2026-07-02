@@ -1,6 +1,6 @@
 [package]
 name = "rsomics-wl-hash"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Weisfeiler-Lehman graph hash & subgraph hashes — value-exact port of networkx.weisfeiler_lehman_graph_hash / weisfeiler_lehman_subgraph_hashes"
 license = "MIT OR Apache-2.0"

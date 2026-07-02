@@ -45,6 +45,12 @@ impl Graph {
         self.idx_to_node.len()
     }
 
+    /// Degree as `nx.Graph.degree` reports it: a self-loop counts twice. The
+    /// self-loop is stored once in `adj`, so add one for the second incidence.
+    fn degree(&self, node: usize) -> usize {
+        self.adj[node].len() + usize::from(self.adj[node].contains(&node))
+    }
+
     /// Node names in first-appearance order (matches `nx.Graph.nodes()`).
     #[must_use]
     pub fn node_names(&self) -> &[String] {
@@ -53,9 +59,11 @@ impl Graph {
 }
 
 /// Parse a whitespace-delimited `u v` edge list. `#` comments and blank lines
-/// are skipped. Parallel edges are deduplicated and self-loops dropped, giving
-/// the undirected simple graph `nx.Graph` induces on the same edges. The node
-/// set is exactly the endpoints seen in the edge list (no isolated nodes).
+/// are skipped. Parallel edges are deduplicated; self-loops are kept (as
+/// `nx.Graph` keeps them), giving the undirected graph `nx.Graph` induces on
+/// the same edges. A self-loop appears once in the node's neighbour list but
+/// adds two to its degree. The node set is exactly the endpoints seen in the
+/// edge list (no isolated nodes).
 #[must_use]
 pub fn parse_edge_list(input: &str) -> Graph {
     let mut g = Graph {
@@ -75,12 +83,11 @@ pub fn parse_edge_list(input: &str) -> Graph {
         };
         let ui = g.intern(u, &mut table);
         let vi = g.intern(v, &mut table);
-        if ui == vi {
-            continue;
-        }
         if !g.adj[ui].contains(&vi) {
             g.adj[ui].push(vi);
-            g.adj[vi].push(ui);
+            if ui != vi {
+                g.adj[vi].push(ui);
+            }
         }
     }
     g
@@ -117,7 +124,7 @@ fn wl_step(g: &Graph, labels: &[String], digest_size: usize) -> Vec<String> {
 
 /// Initial labels: each node's degree as a decimal string.
 fn init_labels(g: &Graph) -> Vec<String> {
-    (0..g.n()).map(|i| g.adj[i].len().to_string()).collect()
+    (0..g.n()).map(|i| g.degree(i).to_string()).collect()
 }
 
 /// Append the Python `repr` of a `(label, count)` pair to `out`: `('<label>', <count>)`.

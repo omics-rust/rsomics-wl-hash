@@ -58,8 +58,10 @@ impl Graph {
     }
 }
 
-/// Parse a whitespace-delimited `u v` edge list. `#` comments and blank lines
-/// are skipped. Parallel edges are deduplicated; self-loops are kept (as
+/// Parse a whitespace-delimited `u v` edge list. Text from the first `#` to
+/// end of line is a comment and is discarded before tokenising (matching
+/// `nx.parse_edgelist`); blank/all-comment lines are skipped. Parallel edges
+/// are deduplicated; self-loops are kept (as
 /// `nx.Graph` keeps them), giving the undirected graph `nx.Graph` induces on
 /// the same edges. A self-loop appears once in the node's neighbour list but
 /// adds two to its degree. The node set is exactly the endpoints seen in the
@@ -73,8 +75,9 @@ pub fn parse_edge_list(input: &str) -> Graph {
     let mut table = HashMap::new();
 
     for line in input.lines() {
-        let line = line.trim();
-        if line.is_empty() || line.starts_with('#') {
+        // nx.parse_edgelist strips a '#' comment anywhere in the line before tokenising.
+        let line = line.split('#').next().unwrap_or("").trim();
+        if line.is_empty() {
             continue;
         }
         let mut parts = line.split_whitespace();
@@ -243,4 +246,22 @@ pub fn subgraph_hashes_from_edge_list(
     digest_size: usize,
 ) -> Vec<NodeHashes> {
     subgraph_hashes(&parse_edge_list(input), iterations, digest_size)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn inline_hash_comment_matches_clean_graph() {
+        // A '#' anywhere truncates the line: "1 2#note" is edge (1,2), and
+        // "0 #x" is the single token "0" so the line is skipped entirely.
+        let with_comments = "0 1\n1 2#note\n2 3\n0 #x\n# full line\n";
+        let clean = "0 1\n1 2\n2 3\n";
+
+        assert_eq!(
+            graph_hash_from_edge_list(with_comments, 3, 16),
+            graph_hash_from_edge_list(clean, 3, 16),
+        );
+    }
 }
